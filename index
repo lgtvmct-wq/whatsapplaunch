@@ -1,0 +1,381 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WhatsApp Launcher</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f5f0;
+      --surface: #ffffff;
+      --border: rgba(0,0,0,0.1);
+      --border-focus: #25D366;
+      --text-primary: #1a1a1a;
+      --text-secondary: #666;
+      --text-hint: #aaa;
+      --secondary-bg: #f9f9f7;
+      --danger: #d32f2f;
+      --green: #25D366;
+      --green-hover: #1ebd5a;
+      --radius: 10px;
+      --radius-sm: 7px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1a1a1a;
+        --surface: #242424;
+        --border: rgba(255,255,255,0.1);
+        --text-primary: #f0f0f0;
+        --text-secondary: #999;
+        --text-hint: #555;
+        --secondary-bg: #2a2a2a;
+        --danger: #ef5350;
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem 1rem;
+      color: var(--text-primary);
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 2px 24px rgba(0,0,0,0.06);
+    }
+
+    .header { display: flex; align-items: center; gap: 12px; margin-bottom: 1.75rem; }
+    .icon-circle {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: var(--green);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .icon-circle svg { width: 24px; height: 24px; fill: white; }
+    .header-text h1 { font-size: 17px; font-weight: 600; color: var(--text-primary); }
+    .header-text p { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    .phone-row {
+      display: flex;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: visible;
+      margin-bottom: 6px;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      position: relative;
+    }
+    .phone-row:focus-within {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(37,211,102,0.15);
+    }
+
+    .cc-wrap { position: relative; flex-shrink: 0; }
+    .cc-display {
+      height: 52px; padding: 0 8px 0 12px;
+      background: var(--secondary-bg);
+      border-right: 1px solid var(--border);
+      border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+      display: flex; align-items: center; gap: 5px;
+      cursor: pointer; font-size: 13px;
+      font-family: 'SF Mono', 'Fira Mono', monospace;
+      color: var(--text-primary);
+      white-space: nowrap; user-select: none;
+    }
+    .cc-display .chevron { font-size: 10px; color: var(--text-hint); margin-left: 2px; }
+
+    .cc-dropdown {
+      position: absolute; top: calc(100% + 4px); left: 0; z-index: 999;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      min-width: 240px; max-height: 280px;
+      overflow-y: auto; display: none;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    }
+    .cc-dropdown.open { display: block; }
+
+    .cc-search {
+      width: 100%; border: none;
+      border-bottom: 1px solid var(--border);
+      padding: 10px 12px; font-size: 14px;
+      outline: none;
+      background: var(--surface);
+      color: var(--text-primary);
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .cc-search::placeholder { color: var(--text-hint); }
+
+    .cc-option {
+      padding: 8px 12px; font-size: 13px;
+      cursor: pointer; display: flex; align-items: center; gap: 8px;
+      color: var(--text-primary);
+      transition: background 0.1s;
+    }
+    .cc-option:hover { background: var(--secondary-bg); }
+    .cc-option.selected { background: rgba(37,211,102,0.1); }
+    .cc-option .name { flex: 1; }
+    .cc-option .dial { font-family: 'SF Mono', 'Fira Mono', monospace; color: var(--text-secondary); font-size: 12px; }
+
+    .phone-input {
+      border: none; outline: none;
+      background: transparent;
+      color: var(--text-primary);
+      font-size: 18px;
+      padding: 0 14px;
+      height: 52px; flex: 1; width: 0;
+      font-family: 'SF Mono', 'Fira Mono', monospace;
+      letter-spacing: 0.04em;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+    .phone-input::placeholder { color: var(--text-hint); font-size: 15px; font-family: inherit; }
+
+    .error {
+      font-size: 12px; color: var(--danger);
+      margin-bottom: 10px; display: none;
+    }
+
+    .msg-group { margin-top: 1.1rem; }
+    .opt-label { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--text-hint); font-size: 11px; }
+
+    textarea {
+      width: 100%; border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--text-primary);
+      font-size: 14px; padding: 12px 14px;
+      resize: vertical; min-height: 90px;
+      font-family: inherit;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      margin-top: 6px;
+    }
+    textarea:focus {
+      outline: none; border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(37,211,102,0.15);
+    }
+    textarea::placeholder { color: var(--text-hint); }
+
+    .btn {
+      width: 100%; height: 50px;
+      background: var(--green); color: white;
+      border: none; border-radius: var(--radius-sm);
+      font-size: 15px; font-weight: 600;
+      cursor: pointer; display: flex;
+      align-items: center; justify-content: center; gap: 8px;
+      transition: background 0.15s, transform 0.1s;
+      margin-top: 1.25rem;
+      font-family: inherit;
+    }
+    .btn:hover { background: var(--green-hover); }
+    .btn:active { transform: scale(0.98); }
+    .btn svg { width: 18px; height: 18px; fill: white; }
+
+    .divider { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0 1rem; }
+
+    .hist-label {
+      font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.07em;
+      color: var(--text-secondary); margin-bottom: 8px;
+    }
+    .hist-item {
+      font-family: 'SF Mono', 'Fira Mono', monospace;
+      font-size: 13px; color: var(--text-secondary);
+      padding: 6px 8px; border-radius: var(--radius-sm);
+      cursor: pointer; display: flex; align-items: center; gap: 8px;
+      transition: background 0.1s;
+    }
+    .hist-item:hover { background: var(--secondary-bg); color: var(--text-primary); }
+    .hist-icon { font-size: 13px; }
+
+    footer {
+      margin-top: 1.5rem;
+      font-size: 12px;
+      color: var(--text-hint);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="header">
+      <div class="icon-circle">
+        <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      </div>
+      <div class="header-text">
+        <h1>WhatsApp Launcher</h1>
+        <p>Open a chat with any number instantly</p>
+      </div>
+    </div>
+
+    <label for="phoneNumber">Phone number</label>
+    <div class="phone-row">
+      <div class="cc-wrap">
+        <div class="cc-display" id="ccDisplay" onclick="toggleDropdown()">
+          <span id="ccFlag">🇴🇲</span>
+          <span id="ccCode">+968</span>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="cc-dropdown" id="ccDropdown">
+          <input class="cc-search" type="text" placeholder="Search country or code…" oninput="filterCountries(this.value)" id="ccSearch" />
+          <div id="ccList"></div>
+        </div>
+      </div>
+      <input class="phone-input" type="tel" id="phoneNumber" placeholder="Enter number…" inputmode="numeric" autocomplete="tel-national" />
+    </div>
+    <div class="error" id="phoneError">Please enter a valid phone number (6–15 digits).</div>
+
+    <div class="msg-group">
+      <label>Pre-filled message <span class="opt-label">(optional)</span></label>
+      <textarea id="waMessage" placeholder="Hi, I'd like to chat with you…"></textarea>
+    </div>
+
+    <button class="btn" onclick="openWhatsApp()">
+      <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      Open WhatsApp
+    </button>
+
+    <div id="historySection" style="display:none">
+      <hr class="divider">
+      <div class="hist-label">Recent numbers</div>
+      <div id="historyList"></div>
+    </div>
+  </div>
+
+  <footer>No data is stored on any server &mdash; recent numbers are saved in your browser only.</footer>
+
+  <script>
+    const COUNTRIES = [
+      {name:"Afghanistan",flag:"🇦🇫",dial:"93"},{name:"Albania",flag:"🇦🇱",dial:"355"},{name:"Algeria",flag:"🇩🇿",dial:"213"},{name:"Andorra",flag:"🇦🇩",dial:"376"},{name:"Angola",flag:"🇦🇴",dial:"244"},{name:"Argentina",flag:"🇦🇷",dial:"54"},{name:"Armenia",flag:"🇦🇲",dial:"374"},{name:"Australia",flag:"🇦🇺",dial:"61"},{name:"Austria",flag:"🇦🇹",dial:"43"},{name:"Azerbaijan",flag:"🇦🇿",dial:"994"},{name:"Bahamas",flag:"🇧🇸",dial:"1242"},{name:"Bahrain",flag:"🇧🇭",dial:"973"},{name:"Bangladesh",flag:"🇧🇩",dial:"880"},{name:"Belarus",flag:"🇧🇾",dial:"375"},{name:"Belgium",flag:"🇧🇪",dial:"32"},{name:"Bolivia",flag:"🇧🇴",dial:"591"},{name:"Bosnia",flag:"🇧🇦",dial:"387"},{name:"Brazil",flag:"🇧🇷",dial:"55"},{name:"Brunei",flag:"🇧🇳",dial:"673"},{name:"Bulgaria",flag:"🇧🇬",dial:"359"},{name:"Cambodia",flag:"🇰🇭",dial:"855"},{name:"Cameroon",flag:"🇨🇲",dial:"237"},{name:"Canada",flag:"🇨🇦",dial:"1"},{name:"Chile",flag:"🇨🇱",dial:"56"},{name:"China",flag:"🇨🇳",dial:"86"},{name:"Colombia",flag:"🇨🇴",dial:"57"},{name:"Croatia",flag:"🇭🇷",dial:"385"},{name:"Cuba",flag:"🇨🇺",dial:"53"},{name:"Cyprus",flag:"🇨🇾",dial:"357"},{name:"Czech Republic",flag:"🇨🇿",dial:"420"},{name:"Denmark",flag:"🇩🇰",dial:"45"},{name:"Ecuador",flag:"🇪🇨",dial:"593"},{name:"Egypt",flag:"🇪🇬",dial:"20"},{name:"Ethiopia",flag:"🇪🇹",dial:"251"},{name:"Finland",flag:"🇫🇮",dial:"358"},{name:"France",flag:"🇫🇷",dial:"33"},{name:"Georgia",flag:"🇬🇪",dial:"995"},{name:"Germany",flag:"🇩🇪",dial:"49"},{name:"Ghana",flag:"🇬🇭",dial:"233"},{name:"Greece",flag:"🇬🇷",dial:"30"},{name:"Guatemala",flag:"🇬🇹",dial:"502"},{name:"Hungary",flag:"🇭🇺",dial:"36"},{name:"India",flag:"🇮🇳",dial:"91"},{name:"Indonesia",flag:"🇮🇩",dial:"62"},{name:"Iran",flag:"🇮🇷",dial:"98"},{name:"Iraq",flag:"🇮🇶",dial:"964"},{name:"Ireland",flag:"🇮🇪",dial:"353"},{name:"Israel",flag:"🇮🇱",dial:"972"},{name:"Italy",flag:"🇮🇹",dial:"39"},{name:"Jamaica",flag:"🇯🇲",dial:"1876"},{name:"Japan",flag:"🇯🇵",dial:"81"},{name:"Jordan",flag:"🇯🇴",dial:"962"},{name:"Kazakhstan",flag:"🇰🇿",dial:"7"},{name:"Kenya",flag:"🇰🇪",dial:"254"},{name:"Kuwait",flag:"🇰🇼",dial:"965"},{name:"Kyrgyzstan",flag:"🇰🇬",dial:"996"},{name:"Laos",flag:"🇱🇦",dial:"856"},{name:"Latvia",flag:"🇱🇻",dial:"371"},{name:"Lebanon",flag:"🇱🇧",dial:"961"},{name:"Libya",flag:"🇱🇾",dial:"218"},{name:"Lithuania",flag:"🇱🇹",dial:"370"},{name:"Luxembourg",flag:"🇱🇺",dial:"352"},{name:"Malaysia",flag:"🇲🇾",dial:"60"},{name:"Maldives",flag:"🇲🇻",dial:"960"},{name:"Malta",flag:"🇲🇹",dial:"356"},{name:"Mexico",flag:"🇲🇽",dial:"52"},{name:"Moldova",flag:"🇲🇩",dial:"373"},{name:"Mongolia",flag:"🇲🇳",dial:"976"},{name:"Morocco",flag:"🇲🇦",dial:"212"},{name:"Mozambique",flag:"🇲🇿",dial:"258"},{name:"Myanmar",flag:"🇲🇲",dial:"95"},{name:"Nepal",flag:"🇳🇵",dial:"977"},{name:"Netherlands",flag:"🇳🇱",dial:"31"},{name:"New Zealand",flag:"🇳🇿",dial:"64"},{name:"Nigeria",flag:"🇳🇬",dial:"234"},{name:"North Korea",flag:"🇰🇵",dial:"850"},{name:"Norway",flag:"🇳🇴",dial:"47"},{name:"Oman",flag:"🇴🇲",dial:"968"},{name:"Pakistan",flag:"🇵🇰",dial:"92"},{name:"Palestine",flag:"🇵🇸",dial:"970"},{name:"Panama",flag:"🇵🇦",dial:"507"},{name:"Paraguay",flag:"🇵🇾",dial:"595"},{name:"Peru",flag:"🇵🇪",dial:"51"},{name:"Philippines",flag:"🇵🇭",dial:"63"},{name:"Poland",flag:"🇵🇱",dial:"48"},{name:"Portugal",flag:"🇵🇹",dial:"351"},{name:"Qatar",flag:"🇶🇦",dial:"974"},{name:"Romania",flag:"🇷🇴",dial:"40"},{name:"Russia",flag:"🇷🇺",dial:"7"},{name:"Saudi Arabia",flag:"🇸🇦",dial:"966"},{name:"Senegal",flag:"🇸🇳",dial:"221"},{name:"Serbia",flag:"🇷🇸",dial:"381"},{name:"Singapore",flag:"🇸🇬",dial:"65"},{name:"Slovakia",flag:"🇸🇰",dial:"421"},{name:"Slovenia",flag:"🇸🇮",dial:"386"},{name:"Somalia",flag:"🇸🇴",dial:"252"},{name:"South Africa",flag:"🇿🇦",dial:"27"},{name:"South Korea",flag:"🇰🇷",dial:"82"},{name:"Spain",flag:"🇪🇸",dial:"34"},{name:"Sri Lanka",flag:"🇱🇰",dial:"94"},{name:"Sudan",flag:"🇸🇩",dial:"249"},{name:"Sweden",flag:"🇸🇪",dial:"46"},{name:"Switzerland",flag:"🇨🇭",dial:"41"},{name:"Syria",flag:"🇸🇾",dial:"963"},{name:"Taiwan",flag:"🇹🇼",dial:"886"},{name:"Tajikistan",flag:"🇹🇯",dial:"992"},{name:"Tanzania",flag:"🇹🇿",dial:"255"},{name:"Thailand",flag:"🇹🇭",dial:"66"},{name:"Tunisia",flag:"🇹🇳",dial:"216"},{name:"Turkey",flag:"🇹🇷",dial:"90"},{name:"Turkmenistan",flag:"🇹🇲",dial:"993"},{name:"Uganda",flag:"🇺🇬",dial:"256"},{name:"Ukraine",flag:"🇺🇦",dial:"380"},{name:"UAE",flag:"🇦🇪",dial:"971"},{name:"United Kingdom",flag:"🇬🇧",dial:"44"},{name:"USA",flag:"🇺🇸",dial:"1"},{name:"Uruguay",flag:"🇺🇾",dial:"598"},{name:"Uzbekistan",flag:"🇺🇿",dial:"998"},{name:"Venezuela",flag:"🇻🇪",dial:"58"},{name:"Vietnam",flag:"🇻🇳",dial:"84"},{name:"Yemen",flag:"🇾🇪",dial:"967"},{name:"Zambia",flag:"🇿🇲",dial:"260"},{name:"Zimbabwe",flag:"🇿🇼",dial:"263"}
+    ];
+
+    let selected = COUNTRIES.find(c => c.dial === "968");
+    let history = JSON.parse(localStorage.getItem("wa_history") || "[]");
+
+    function renderList(list) {
+      document.getElementById("ccList").innerHTML = list.map(c => `
+        <div class="cc-option${c===selected?" selected":""}" onclick="selectCountry(${COUNTRIES.indexOf(c)})">
+          <span>${c.flag}</span>
+          <span class="name">${c.name}</span>
+          <span class="dial">+${c.dial}</span>
+        </div>`).join("");
+    }
+
+    function filterCountries(q) {
+      const lq = q.toLowerCase();
+      renderList(COUNTRIES.filter(c => c.name.toLowerCase().includes(lq) || c.dial.includes(lq)));
+    }
+
+    function toggleDropdown() {
+      const dd = document.getElementById("ccDropdown");
+      dd.classList.toggle("open");
+      if (dd.classList.contains("open")) {
+        document.getElementById("ccSearch").value = "";
+        renderList(COUNTRIES);
+        setTimeout(() => document.getElementById("ccSearch").focus(), 50);
+      }
+    }
+
+    function selectCountry(idx) {
+      selected = COUNTRIES[idx];
+      document.getElementById("ccFlag").textContent = selected.flag;
+      document.getElementById("ccCode").textContent = "+" + selected.dial;
+      document.getElementById("ccDropdown").classList.remove("open");
+      document.getElementById("phoneNumber").focus();
+    }
+
+    document.addEventListener("click", function(e) {
+      const dd = document.getElementById("ccDropdown");
+      const display = document.getElementById("ccDisplay");
+      if (!dd.contains(e.target) && !display.contains(e.target)) {
+        dd.classList.remove("open");
+      }
+    });
+
+    document.getElementById("phoneNumber").addEventListener("input", function() {
+      this.value = this.value.replace(/\D/g, "");
+    });
+
+    document.getElementById("phoneNumber").addEventListener("keydown", function(e) {
+      if (e.key === "Enter") openWhatsApp();
+    });
+
+    function openWhatsApp() {
+      const num = document.getElementById("phoneNumber").value.replace(/\D/g, "");
+      const err = document.getElementById("phoneError");
+      if (num.length < 6 || num.length > 15) {
+        err.style.display = "block";
+        return;
+      }
+      err.style.display = "none";
+      const phone = "+" + selected.dial + num;
+      const msg = document.getElementById("waMessage").value.trim();
+      let url = "https://api.whatsapp.com/send?phone=" + encodeURIComponent(phone);
+      if (msg) url += "&text=" + encodeURIComponent(msg);
+      window.open(url, "_blank");
+      const entry = selected.flag + " +" + selected.dial + num;
+      addToHistory(entry);
+    }
+
+    function addToHistory(entry) {
+      history = history.filter(e => e !== entry);
+      history.unshift(entry);
+      if (history.length > 5) history.pop();
+      localStorage.setItem("wa_history", JSON.stringify(history));
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const sec = document.getElementById("historySection");
+      const list = document.getElementById("historyList");
+      if (!history.length) { sec.style.display = "none"; return; }
+      sec.style.display = "block";
+      list.innerHTML = history.map(n => `
+        <div class="hist-item" onclick="fillNumber('${n}')">
+          <span class="hist-icon">🕐</span>${n}
+        </div>`).join("");
+    }
+
+    function fillNumber(entry) {
+      const parts = entry.split(" +");
+      if (parts.length < 2) return;
+      const digits = parts[1];
+      const match = COUNTRIES.find(c => digits.startsWith(c.dial));
+      if (match) {
+        selected = match;
+        document.getElementById("ccFlag").textContent = match.flag;
+        document.getElementById("ccCode").textContent = "+" + match.dial;
+        document.getElementById("phoneNumber").value = digits.slice(match.dial.length);
+      }
+    }
+
+    renderList(COUNTRIES);
+    renderHistory();
+  </script>
+</body>
+</html>
